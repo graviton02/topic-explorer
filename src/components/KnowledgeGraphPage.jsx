@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchKnowledgeGraph } from '../lib/api';
 import KnowledgeGraph3D from './KnowledgeGraph3D';
+import KnowledgeGraph2D from './KnowledgeGraph2D';
 
 const KnowledgeGraphPage = ({ onNavigate, onShowAuth }) => {
   const { user, currentUserSession, getAuthHeaders } = useAuth();
@@ -10,7 +11,7 @@ const KnowledgeGraphPage = ({ onNavigate, onShowAuth }) => {
   const [error, setError] = useState(null);
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [sessionId, setSessionId] = useState(null);
-  const [viewMode, setViewMode] = useState('3d'); // '3d' or 'stats'
+  const [viewMode, setViewMode] = useState('2d'); // '2d', '3d', or 'stats'
   
   // Initialize session ID
   useEffect(() => {
@@ -212,6 +213,16 @@ const KnowledgeGraphPage = ({ onNavigate, onShowAuth }) => {
               {/* View Mode Toggle */}
               <div className="flex items-center space-x-2 bg-gray-800/50 rounded-lg p-1">
                 <button
+                  onClick={() => handleViewModeChange('2d')}
+                  className={`px-3 py-1 rounded text-sm transition-colors ${
+                    viewMode === '2d' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'text-gray-300 hover:text-white'
+                  }`}
+                >
+                  2D Network
+                </button>
+                <button
                   onClick={() => handleViewModeChange('3d')}
                   className={`px-3 py-1 rounded text-sm transition-colors ${
                     viewMode === '3d' 
@@ -268,7 +279,18 @@ const KnowledgeGraphPage = ({ onNavigate, onShowAuth }) => {
       </header>
       
       {/* Main Content */}
-      {viewMode === '3d' ? (
+      {viewMode === '2d' ? (
+        <div className="h-screen">
+          <KnowledgeGraph2D
+            topics={graphData.topics}
+            connections={graphData.connections}
+            clusters={graphData.clusters}
+            onTopicSelect={handleTopicSelect}
+            selectedTopic={selectedTopic}
+            className="h-full"
+          />
+        </div>
+      ) : viewMode === '3d' ? (
         <div className="h-screen">
           <KnowledgeGraph3D
             topics={graphData.topics}
