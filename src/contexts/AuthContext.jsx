@@ -44,7 +44,17 @@ export const AuthProvider = ({ children }) => {
   // Listen for auth changes
   useEffect(() => {
     const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session)
+      console.log('Auth state changed:', event, session?.user?.id || 'no session')
+      
+      // Prevent infinite loops by ignoring certain events
+      if (event === 'TOKEN_REFRESHED' || event === 'SESSION_UPDATED') {
+        // Just update session silently without triggering profile/session loads
+        if (session) {
+          setSession(session)
+          setUser(session.user)
+        }
+        return
+      }
       
       if (session) {
         setSession(session)
