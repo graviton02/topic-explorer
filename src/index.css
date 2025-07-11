@@ -1,0 +1,163 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --fg-primary: #FFFFFF;
+  --fg-secondary: #BFC0CC;
+  --gradient-warm: linear-gradient(145deg,#FF915A 0%,#FFBB7E 45%,#F6F1E8 100%);
+  --panel-bg: rgba(32,10,46,0.65);
+  --neon-stroke: #C09FFF;
+  --accent: #7C5CFF;
+
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: radial-gradient(circle at 50% 0%, #2b0d38 0%, #110d19 60%);
+  color: var(--fg-secondary); /* Default body text color */
+}
+
+/* Subtle film-grain overlay */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: url('./noise.png'); /* Assuming noise.png will be added to src */
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  pointer-events: none; /* Ensure it doesn't interfere with interactions */
+  z-index: 9999; /* Ensure it's on top */
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+h1 {
+  font-family: "Segoe UI Variable", sans-serif;
+  font-size: clamp(2.6rem, 5vw, 4rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--fg-primary);
+}
+
+h2, h3 {
+  font-family: "Segoe UI Variable", sans-serif;
+  font-weight: 500;
+  color: var(--fg-primary);
+  /* Sizes will be H2: 1.8rem, H3: 1.4rem, can be adjusted per component if needed */
+}
+
+h2 {
+  font-size: 1.8rem;
+}
+
+h3 {
+  font-size: 1.4rem;
+}
+
+p, li, span, label, input, button, a {
+  font-family: "Segoe UI", sans-serif;
+  font-size: 1rem;
+  font-weight: 300; /* Or 400 based on specific needs */
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
+/* Glass Card Styles */
+.card {
+  position: relative;
+  background: var(--panel-bg);
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.07) inset,
+    0 8px 24px rgba(0,0,0,0.35);
+  backdrop-filter: blur(24px) saturate(150%);
+  padding: 20px; /* Added padding for content within cards */
+  margin-bottom: 20px; /* Added margin for spacing between cards */
+}
+
+.card.--glow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 8px 0 var(--neon-stroke);
+  pointer-events: none;
+}
