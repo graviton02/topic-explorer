@@ -670,6 +670,11 @@ app.get('/api/topics-for-map', authenticateUser, async (req, res) => {
   }
 });
 
+// Health check endpoint for Railway
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
 // Placeholder for legacy graph API (keep for compatibility)
 app.get('/api/graph', (req, res) => {
   res.json({ message: 'Graph API has been replaced by /api/exploration-paths and /api/topics-for-map' });
