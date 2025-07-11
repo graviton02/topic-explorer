@@ -675,6 +675,19 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
+// Debug endpoint to check environment variables
+app.get('/api/debug', (req, res) => {
+  res.json({
+    hasOpenAiKey: !!process.env.OPENAI_API_KEY,
+    openAiKeyPrefix: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.substring(0, 10) + '...' : 'NOT_FOUND',
+    hasSupabaseUrl: !!process.env.SUPABASE_URL,
+    hasSupabaseKey: !!process.env.SUPABASE_SERVICE_KEY,
+    openAiClientInitialized: !!openai,
+    nodeEnv: process.env.NODE_ENV,
+    railwayEnv: process.env.RAILWAY_ENVIRONMENT
+  });
+});
+
 // Placeholder for legacy graph API (keep for compatibility)
 app.get('/api/graph', (req, res) => {
   res.json({ message: 'Graph API has been replaced by /api/exploration-paths and /api/topics-for-map' });
