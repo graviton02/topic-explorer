@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { fetchKnowledgeGraph } from '../lib/api';
 import KnowledgeGraph3D from './KnowledgeGraph3D';
 
 const KnowledgeGraphPage = ({ onNavigate, onShowAuth }) => {
@@ -14,9 +15,11 @@ const KnowledgeGraphPage = ({ onNavigate, onShowAuth }) => {
   // Initialize session ID
   useEffect(() => {
     if (user && currentUserSession) {
+      console.log('Setting authenticated user session ID:', currentUserSession.id);
       setSessionId(currentUserSession.id);
     } else {
       const currentSessionId = sessionStorage.getItem('appSessionId');
+      console.log('Setting anonymous session ID:', currentSessionId);
       setSessionId(currentSessionId);
     }
   }, [user, currentUserSession]);
@@ -24,29 +27,25 @@ const KnowledgeGraphPage = ({ onNavigate, onShowAuth }) => {
   // Fetch knowledge graph data
   useEffect(() => {
     const fetchGraphData = async () => {
-      if (!sessionId) return;
+      if (!sessionId) {
+        console.log('No session ID available yet');
+        return;
+      }
       
       setLoading(true);
       setError(null);
       
       try {
-        const params = new URLSearchParams();
-        if (user && currentUserSession) {
-          params.append('userSessionId', sessionId);
-        } else {
-          params.append('sessionId', sessionId);
-        }
-        
+        console.log('Fetching knowledge graph data for session:', sessionId);
         const authHeaders = user ? getAuthHeaders() : {};
-        const response = await fetch(`/api/knowledge-graph?${params}`, {
-          headers: authHeaders
-        });
         
-        if (!response.ok) {
-          throw new Error('Failed to fetch knowledge graph data');
-        }
+        const data = await fetchKnowledgeGraph(
+          user ? null : sessionId,  // sessionId for anonymous users
+          user ? sessionId : null,  // userSessionId for authenticated users
+          authHeaders
+        );
         
-        const data = await response.json();
+        console.log('Graph data loaded:', data);
         setGraphData(data);
       } catch (err) {
         console.error('Error fetching graph data:', err);
@@ -160,14 +159,26 @@ const KnowledgeGraphPage = ({ onNavigate, onShowAuth }) => {
         
         {/* Empty State */}
         <div className="flex items-center justify-center h-screen">
-          <div className="text-center">
+          <div className="text-center max-w-md">
             <div className="w-24 h-24 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
               <svg className="w-12 h-12 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m-6 3l6-3" />
               </svg>
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">No Topics Explored Yet</h2>
-            <p className="text-gray-300 mb-6">Start exploring topics to build your knowledge graph</p>
+            <p className="text-gray-300 mb-4">Start exploring topics to build your knowledge graph</p>
+            
+            {/* Debug info */}
+            <div className="bg-gray-800/30 rounded-lg p-3 mb-6 text-xs text-left">
+              <div className="text-gray-400 mb-1">Debug Info:</div>
+              <div className="text-gray-300">Session ID: {sessionId || 'Not set'}</div>
+              <div className="text-gray-300">User: {user ? 'Authenticated' : 'Anonymous'}</div>
+              <div className="text-gray-300">Data loaded: {graphData ? 'Yes' : 'No'}</div>
+              {graphData && (
+                <div className="text-gray-300">Topics found: {graphData.topics?.length || 0}</div>
+              )}
+            </div>
+            
             <button 
               onClick={() => onNavigate?.('dashboard')}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

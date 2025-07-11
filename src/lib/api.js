@@ -369,4 +369,43 @@ export const migrateAnonymousSession = async (sessionId, sessionName, authHeader
     console.error('Error migrating session:', error);
     throw error;
   }
+};
+
+/**
+ * Fetch knowledge graph data
+ * @param {string} sessionId - The session ID (for anonymous users)
+ * @param {string} userSessionId - The user session ID (for authenticated users)
+ * @param {Object} authHeaders - Optional auth headers for authenticated requests
+ * @returns {Promise<Object>} - Knowledge graph data with topics, connections, and clusters
+ */
+export const fetchKnowledgeGraph = async (sessionId, userSessionId = null, authHeaders = {}) => {
+  try {
+    const params = new URLSearchParams();
+    
+    if (authHeaders.Authorization && userSessionId) {
+      params.append('userSessionId', userSessionId);
+    } else if (sessionId) {
+      params.append('sessionId', sessionId);
+    }
+    
+    console.log('Fetching knowledge graph with params:', params.toString());
+    
+    const response = await fetch(`/api/knowledge-graph?${params}`, {
+      headers: {
+        ...authHeaders,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch knowledge graph');
+    }
+    
+    const result = await response.json();
+    console.log('Knowledge graph data received:', result);
+    return result;
+  } catch (error) {
+    console.error('Error fetching knowledge graph:', error);
+    throw error;
+  }
 }; 

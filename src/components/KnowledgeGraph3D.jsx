@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import React, { useRef, useEffect, useState, useMemo, Suspense } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Text, Sphere, Line } from '@react-three/drei';
 import * as THREE from 'three';
@@ -152,73 +152,115 @@ const KnowledgeGraph3D = ({
     }
   };
   
+  // Fallback for Three.js loading errors
+  const [hasWebGL, setHasWebGL] = useState(true);
+  
+  useEffect(() => {
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      if (!gl) {
+        setHasWebGL(false);
+      }
+    } catch (e) {
+      setHasWebGL(false);
+    }
+  }, []);
+  
+  if (!hasWebGL) {
+    return (
+      <div className={`w-full h-full flex items-center justify-center ${className}`}>
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01" />
+            </svg>
+          </div>
+          <h3 className="text-white font-semibold mb-2">WebGL Not Supported</h3>
+          <p className="text-gray-300 text-sm">Your browser doesn't support 3D graphics. Please use a modern browser.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`w-full h-full ${className}`}>
       <Canvas
         camera={{ position: [0, 0, 30], fov: 75 }}
         style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}
+        onError={(error) => {
+          console.error('Canvas error:', error);
+          setHasWebGL(false);
+        }}
       >
-        {/* Lighting */}
-        <ambientLight intensity={0.4} />
-        <directionalLight position={[10, 10, 5]} intensity={1} />
-        <pointLight position={[-10, -10, -5]} intensity={0.5} color="#3B82F6" />
-        
-        {/* Camera controls */}
-        <OrbitControls 
-          enablePan={true}
-          enableZoom={true}
-          enableRotate={true}
-          maxDistance={100}
-          minDistance={5}
-        />
-        <CameraController target={cameraTarget} />
-        
-        {/* Render topic nodes */}
-        {topics.map((topic) => (
-          <TopicNode
-            key={topic.id}
-            position={topicPositions[topic.id] || [0, 0, 0]}
-            topic={topic}
-            cluster={clusters[topic.id] || 'default'}
-            onClick={() => handleTopicClick(topic)}
-            isSelected={selectedTopic?.id === topic.id}
-          />
-        ))}
-        
-        {/* Render connections */}
-        {connections.map((connection, index) => {
-          const startPos = topicPositions[connection.from];
-          const endPos = topicPositions[connection.to];
+        <Suspense fallback={
+          <mesh>
+            <boxGeometry args={[1, 1, 1]} />
+            <meshBasicMaterial color="gray" />
+          </mesh>
+        }>
+          {/* Lighting */}
+          <ambientLight intensity={0.4} />
+          <directionalLight position={[10, 10, 5]} intensity={1} />
+          <pointLight position={[-10, -10, -5]} intensity={0.5} color="#3B82F6" />
           
-          if (startPos && endPos) {
-            return (
-              <TopicConnection
-                key={index}
-                start={startPos}
-                end={endPos}
-                strength={connection.strength || 1}
-              />
-            );
-          }
-          return null;
-        })}
-        
-        {/* Background particles for ambiance */}
-        <group>
-          {Array.from({ length: 50 }, (_, i) => (
-            <Sphere
-              key={i}
-              position={[
-                (Math.random() - 0.5) * 100,
-                (Math.random() - 0.5) * 100,
-                (Math.random() - 0.5) * 100
-              ]}
-              scale={0.1}
-            >
-              <meshBasicMaterial color="#374151" transparent opacity={0.3} />
-            </Sphere>
+          {/* Camera controls */}
+          <OrbitControls 
+            enablePan={true}
+            enableZoom={true}
+            enableRotate={true}
+            maxDistance={100}
+            minDistance={5}
+          />
+          <CameraController target={cameraTarget} />
+          
+          {/* Render topic nodes */}
+          {topics.map((topic) => (
+            <TopicNode
+              key={topic.id}
+              position={topicPositions[topic.id] || [0, 0, 0]}
+              topic={topic}
+              cluster={clusters[topic.id] || 'default'}
+              onClick={() => handleTopicClick(topic)}
+              isSelected={selectedTopic?.id === topic.id}
+            />
           ))}
-        </group>
+          
+          {/* Render connections */}
+          {connections.map((connection, index) => {
+            const startPos = topicPositions[connection.from];
+            const endPos = topicPositions[connection.to];
+            
+            if (startPos && endPos) {
+              return (
+                <TopicConnection
+                  key={index}
+                  start={startPos}
+                  end={endPos}
+                  strength={connection.strength || 1}
+                />
+              );
+            }
+            return null;
+          })}
+          
+          {/* Background particles for ambiance */}
+          <group>
+            {Array.from({ length: 20 }, (_, i) => (
+              <Sphere
+                key={i}
+                position={[
+                  (Math.random() - 0.5) * 60,
+                  (Math.random() - 0.5) * 60,
+                  (Math.random() - 0.5) * 60
+                ]}
+                scale={0.1}
+              >
+                <meshBasicMaterial color="#374151" transparent opacity={0.2} />
+              </Sphere>
+            ))}
+          </group>
+        </Suspense>
       </Canvas>
       
       {/* UI Overlay */}
