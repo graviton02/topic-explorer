@@ -229,6 +229,12 @@ const MainDashboard = ({ onNavigate, onShowAuth }) => {
                   Sessions
                 </button>
                 <button 
+                  onClick={() => onNavigate?.('knowledge-graph')}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  Knowledge Graph
+                </button>
+                <button 
                   onClick={() => onNavigate?.('profile')}
                   className="text-gray-400 hover:text-white transition-colors"
                 >
@@ -325,6 +331,15 @@ const MainDashboard = ({ onNavigate, onShowAuth }) => {
             className="px-6 py-3 bg-gray-800/50 border border-gray-600 rounded-lg text-white hover:bg-gray-700/50 transition-colors"
           >
             View History
+          </button>
+          <button 
+            onClick={() => onNavigate?.('knowledge-graph')}
+            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m-6 3l6-3" />
+            </svg>
+            <span>Knowledge Graph</span>
           </button>
           <button className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
             Explore

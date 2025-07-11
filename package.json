@@ -14,6 +14,9 @@
     "simple-test": "node tests/simple-visual-test.cjs"
   },
   "dependencies": {
+    "@react-three/drei": "^10.5.0",
+    "@react-three/fiber": "^9.2.0",
+    "@react-three/postprocessing": "^3.0.4",
     "@supabase/supabase-js": "^2.49.5",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -21,7 +24,8 @@
     "openai": "^4.38.0",
     "puppeteer": "^24.12.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "three": "^0.178.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",

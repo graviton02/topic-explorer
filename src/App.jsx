@@ -4,12 +4,13 @@ import AuthRouter from './components/auth/AuthRouter';
 import MainDashboard from './components/MainDashboard';
 import SessionsPage from './components/SessionsPage';
 import ProfilePage from './components/ProfilePage';
+import KnowledgeGraphPage from './components/KnowledgeGraphPage';
 import { validateEnvironment } from './lib/env-validation';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'sessions', 'profile'
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'sessions', 'profile', 'knowledge-graph'
   const [envError, setEnvError] = useState(null);
 
   // Validate environment on app start
@@ -80,6 +81,8 @@ function App() {
         <SessionsPage onNavigate={setCurrentView} onShowAuth={handleShowAuth} />
       ) : currentView === 'profile' ? (
         <ProfilePage onNavigate={setCurrentView} onShowAuth={handleShowAuth} />
+      ) : currentView === 'knowledge-graph' ? (
+        <KnowledgeGraphPage onNavigate={setCurrentView} onShowAuth={handleShowAuth} />
       ) : (
         <MainDashboard onNavigate={setCurrentView} onShowAuth={handleShowAuth} />
       )}

@@ -697,6 +697,181 @@ app.post('/api/graph', (req, res) => {
   res.json({ message: 'Graph data is now automatically saved when topics are created' });
 });
 
+// Smart Topic Clustering Algorithm
+function clusterTopics(topics) {
+  const clusters = {};
+  
+  // Define keyword patterns for different categories
+  const clusterKeywords = {
+    'technology': [
+      'machine learning', 'artificial intelligence', 'ai', 'ml', 'programming', 'software', 
+      'computer', 'algorithm', 'data science', 'python', 'javascript', 'web development',
+      'blockchain', 'cryptocurrency', 'cloud computing', 'cybersecurity', 'automation',
+      'robotics', 'iot', 'internet of things', 'neural network', 'deep learning',
+      'api', 'database', 'framework', 'coding', 'tech', 'digital', 'app', 'mobile'
+    ],
+    'science': [
+      'physics', 'chemistry', 'biology', 'research', 'experiment', 'scientific',
+      'study', 'theory', 'hypothesis', 'analysis', 'genetics', 'evolution',
+      'quantum', 'molecular', 'climate', 'environment', 'ecology', 'astronomy',
+      'geology', 'mathematics', 'statistics', 'laboratory', 'discovery'
+    ],
+    'business': [
+      'business', 'marketing', 'finance', 'management', 'strategy', 'startup',
+      'entrepreneur', 'investment', 'market', 'economy', 'sales', 'customer',
+      'revenue', 'profit', 'company', 'corporate', 'leadership', 'team',
+      'project management', 'agile', 'productivity', 'innovation', 'growth'
+    ],
+    'health': [
+      'health', 'medical', 'medicine', 'healthcare', 'wellness', 'fitness',
+      'nutrition', 'diet', 'exercise', 'mental health', 'therapy', 'treatment',
+      'disease', 'prevention', 'symptoms', 'diagnosis', 'pharmaceutical',
+      'hospital', 'patient', 'doctor', 'nurse', 'surgery', 'recovery'
+    ],
+    'education': [
+      'education', 'learning', 'teaching', 'school', 'university', 'student',
+      'curriculum', 'academic', 'knowledge', 'skill', 'training', 'course',
+      'degree', 'certification', 'pedagogy', 'classroom', 'online learning',
+      'e-learning', 'tutorial', 'lesson', 'study', 'research'
+    ],
+    'creative': [
+      'art', 'design', 'creative', 'music', 'writing', 'literature', 'poetry',
+      'painting', 'photography', 'film', 'movie', 'theater', 'dance',
+      'sculpture', 'graphic design', 'ux', 'ui', 'visual', 'aesthetic',
+      'storytelling', 'creativity', 'inspiration', 'culture', 'entertainment'
+    ],
+    'lifestyle': [
+      'lifestyle', 'travel', 'food', 'cooking', 'recipe', 'culture', 'tradition',
+      'hobby', 'entertainment', 'sports', 'game', 'leisure', 'fashion',
+      'home', 'family', 'relationship', 'personal development', 'mindfulness',
+      'meditation', 'philosophy', 'spirituality', 'community', 'social'
+    ]
+  };
+  
+  // Score each topic against cluster keywords
+  topics.forEach(topic => {
+    const topicText = (topic.name + ' ' + (topic.description || '') + ' ' + 
+                     (topic.subtopics || []).join(' ') + ' ' + 
+                     (topic.questions || []).join(' ')).toLowerCase();
+    
+    let maxScore = 0;
+    let bestCluster = 'default';
+    
+    Object.entries(clusterKeywords).forEach(([cluster, keywords]) => {
+      let score = 0;
+      keywords.forEach(keyword => {
+        const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+        const matches = topicText.match(regex);
+        if (matches) {
+          score += matches.length;
+        }
+      });
+      
+      if (score > maxScore) {
+        maxScore = score;
+        bestCluster = cluster;
+      }
+    });
+    
+    clusters[topic.id] = maxScore > 0 ? bestCluster : 'default';
+  });
+  
+  return clusters;
+}
+
+// API endpoint for knowledge graph data
+app.get('/api/knowledge-graph', optionalAuth, async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: 'Supabase client not initialized' });
+  }
+  
+  try {
+    const { sessionId, userSessionId } = req.query;
+    const userId = req.user?.id || null;
+    
+    let topics = [];
+    let connections = [];
+    
+    // Fetch topics based on user type
+    if (userId && userSessionId) {
+      // Authenticated user
+      const { data: topicsData, error: topicsError } = await supabase
+        .from('topics')
+        .select('*')
+        .eq('user_session_id', userSessionId)
+        .eq('user_id', userId)
+        .order('timestamp', { ascending: false });
+      
+      if (topicsError) throw topicsError;
+      topics = topicsData || [];
+      
+      // Fetch exploration paths for connections
+      const { data: pathsData, error: pathsError } = await supabase
+        .from('exploration_paths')
+        .select(`
+          from_topic_id,
+          to_topic_id,
+          from_topic:topics!from_topic_id(id, name),
+          to_topic:topics!to_topic_id(id, name)
+        `)
+        .eq('user_id', userId)
+        .eq('session_id', userSessionId);
+      
+      if (!pathsError && pathsData) {
+        connections = pathsData.map(path => ({
+          from: path.from_topic_id,
+          to: path.to_topic_id,
+          strength: 1
+        }));
+      }
+    } else if (sessionId) {
+      // Anonymous user
+      const { data: topicsData, error: topicsError } = await supabase
+        .from('topics')
+        .select('*')
+        .eq('session_id', sessionId)
+        .is('user_id', null)
+        .order('timestamp', { ascending: false });
+      
+      if (topicsError) throw topicsError;
+      topics = topicsData || [];
+      
+      // For anonymous users, create connections based on parent_topic_id
+      connections = topics
+        .filter(topic => topic.parent_topic_id)
+        .map(topic => ({
+          from: topic.parent_topic_id,
+          to: topic.id,
+          strength: 1
+        }));
+    }
+    
+    // Apply smart clustering
+    const clusters = clusterTopics(topics);
+    
+    // Add cluster statistics
+    const clusterStats = {};
+    Object.values(clusters).forEach(cluster => {
+      clusterStats[cluster] = (clusterStats[cluster] || 0) + 1;
+    });
+    
+    res.json({
+      success: true,
+      topics: topics,
+      connections: connections,
+      clusters: clusters,
+      stats: {
+        totalTopics: topics.length,
+        totalConnections: connections.length,
+        clusterDistribution: clusterStats
+      }
+    });
+  } catch (error) {
+    console.error('Knowledge graph error:', error);
+    res.status(500).json({ error: 'Failed to fetch knowledge graph data' });
+  }
+});
+
 // Start the server
 app.listen(port, () => {
   console.log(`Local API server listening at http://localhost:${port}`);
