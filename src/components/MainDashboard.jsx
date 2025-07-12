@@ -116,7 +116,7 @@ const MainDashboard = ({ onNavigate, onShowAuth }) => {
     setError(null);
     
     try {
-      const authHeaders = user ? getAuthHeaders() : {};
+      const authHeaders = isRealAuthenticatedUser() ? getAuthHeaders() : {};
       console.log('Topic submission debug info:');
       console.log('- User exists:', !!user);
       console.log('- User ID:', user?.id);
@@ -219,8 +219,8 @@ const MainDashboard = ({ onNavigate, onShowAuth }) => {
     if (!sessionId) return;
     setIsHistoryLoading(true);
     try {
-      const authHeaders = user ? getAuthHeaders() : {};
-      const result = user 
+      const authHeaders = isRealAuthenticatedUser() ? getAuthHeaders() : {};
+      const result = isRealAuthenticatedUser() 
         ? await clearTopicHistory(null, sessionId, authHeaders)
         : await clearTopicHistory(sessionId);
         
