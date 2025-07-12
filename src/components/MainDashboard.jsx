@@ -14,6 +14,13 @@ const generateUUID = () => {
   });
 };
 
+// Function to generate session ID for anonymous users (TEXT format)
+const generateAnonymousSessionId = () => {
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 1000000);
+  return `anon_${timestamp}_${random}`;
+};
+
 // Helper to map DB history item to client-side history item structure
 const mapDbHistoryItemToClient = (dbItem) => ({
   id: dbItem.id,
@@ -27,7 +34,7 @@ const mapDbHistoryItemToClient = (dbItem) => ({
 });
 
 const MainDashboard = ({ onNavigate, onShowAuth }) => {
-  const { user, currentUserSession, getAuthHeaders } = useAuth();
+  const { user, currentUserSession, getAuthHeaders, isRealAuthenticatedUser, createNewAutoSession, trackActivity } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [topicData, setTopicData] = useState(null);
@@ -38,21 +45,34 @@ const MainDashboard = ({ onNavigate, onShowAuth }) => {
   const [currentPosition, setCurrentPosition] = useState(-1);
   const [currentView, setCurrentView] = useState('main');
 
-  // Effect to initialize sessionId
+  // Effect to initialize sessionId with automatic session management
   useEffect(() => {
-    if (user && currentUserSession) {
-      // Authenticated user with session
-      setSessionId(currentUserSession.id);
-    } else {
-      // Anonymous user
-      let currentSessionId = sessionStorage.getItem('appSessionId');
-      if (!currentSessionId) {
-        currentSessionId = generateUUID();
-        sessionStorage.setItem('appSessionId', currentSessionId);
+    const initializeSession = async () => {
+      if (isRealAuthenticatedUser()) {
+        if (currentUserSession) {
+          // User has an active session
+          setSessionId(currentUserSession.id);
+        } else {
+          // User is authenticated but has no active session, create one automatically
+          console.log('User authenticated but no session, creating auto-session...');
+          const newSession = await createNewAutoSession();
+          if (newSession) {
+            setSessionId(newSession.id);
+          }
+        }
+      } else {
+        // Anonymous user (including demo mode users)
+        let currentSessionId = sessionStorage.getItem('appSessionId');
+        if (!currentSessionId) {
+          currentSessionId = generateAnonymousSessionId();
+          sessionStorage.setItem('appSessionId', currentSessionId);
+        }
+        setSessionId(currentSessionId);
       }
-      setSessionId(currentSessionId);
-    }
-  }, [user, currentUserSession]);
+    };
+
+    initializeSession();
+  }, [user, currentUserSession, isRealAuthenticatedUser, createNewAutoSession]);
 
   // Effect to fetch history when sessionId is available
   useEffect(() => {
@@ -61,11 +81,11 @@ const MainDashboard = ({ onNavigate, onShowAuth }) => {
         setIsHistoryLoading(true);
         try {
           let dbHistory;
-          if (user && currentUserSession) {
-            // Authenticated user
+          if (isRealAuthenticatedUser() && currentUserSession) {
+            // Real authenticated user
             dbHistory = await fetchTopicHistory(null, sessionId, getAuthHeaders());
           } else {
-            // Anonymous user
+            // Anonymous user (including demo mode)
             dbHistory = await fetchTopicHistory(sessionId);
           }
           
@@ -84,6 +104,9 @@ const MainDashboard = ({ onNavigate, onShowAuth }) => {
   }, [sessionId, user, currentUserSession, getAuthHeaders]);
 
   const handleTopicSubmit = async (topic) => {
+    // Track user activity for session timeout management
+    trackActivity();
+    
     if (!sessionId) {
       console.error("Session ID not initialized yet.");
       setError("Session not initialized. Please refresh.");
@@ -94,16 +117,46 @@ const MainDashboard = ({ onNavigate, onShowAuth }) => {
     
     try {
       const authHeaders = user ? getAuthHeaders() : {};
+      console.log('Topic submission debug info:');
+      console.log('- User exists:', !!user);
+      console.log('- User ID:', user?.id);
+      console.log('- Session ID:', sessionId);
+      console.log('- Current user session:', currentUserSession?.id);
+      console.log('- isRealAuthenticatedUser():', isRealAuthenticatedUser());
+      console.log('- Auth headers:', authHeaders);
+      
       const openAiData = await fetchTopic(topic, authHeaders);
 
       const historyPayload = {
         name: topic,
         data: openAiData,
-        sessionId: user ? null : sessionId,
-        userSessionId: user ? sessionId : null
+        sessionId: !isRealAuthenticatedUser() ? sessionId : null,
+        userSessionId: isRealAuthenticatedUser() ? sessionId : null
       };
       
+      console.log('History payload:', historyPayload);
+      
       const savedHistoryItemResult = await saveTopicToHistory(historyPayload, authHeaders);
+
+      // If authenticated user request failed with session_id error, try as anonymous user
+      if (!savedHistoryItemResult.success && savedHistoryItemResult.error?.includes('session_id is required for anonymous users') && isRealAuthenticatedUser()) {
+        console.warn('Authenticated user treated as anonymous by server, retrying as anonymous user');
+        const fallbackPayload = {
+          ...historyPayload,
+          sessionId: sessionId,
+          userSessionId: null
+        };
+        console.log('Fallback payload:', fallbackPayload);
+        const fallbackResult = await saveTopicToHistory(fallbackPayload, {});
+        
+        if (fallbackResult.success) {
+          console.log('Fallback request succeeded');
+          // Use the fallback result
+          Object.assign(savedHistoryItemResult, fallbackResult);
+        } else {
+          console.error('Fallback request also failed:', fallbackResult.error);
+        }
+      }
 
       if (savedHistoryItemResult.success && savedHistoryItemResult.data && savedHistoryItemResult.data.length > 0) {
         const newDbItem = savedHistoryItemResult.data[0];
@@ -133,10 +186,12 @@ const MainDashboard = ({ onNavigate, onShowAuth }) => {
   };
 
   const handleSubtopicClick = (subtopic) => {
+    trackActivity();
     handleTopicSubmit(subtopic);
   };
 
   const handleQuestionClick = (question) => {
+    trackActivity();
     const cleanQuestion = question.endsWith('?') 
       ? question.substring(0, question.length - 1) 
       : question;
@@ -144,6 +199,7 @@ const MainDashboard = ({ onNavigate, onShowAuth }) => {
   };
 
   const handleBackClick = () => {
+    trackActivity();
     if (currentPosition > 0) {
       const newPosition = currentPosition - 1;
       setCurrentPosition(newPosition);
@@ -223,12 +279,6 @@ const MainDashboard = ({ onNavigate, onShowAuth }) => {
                   Dashboard
                 </button>
                 <button 
-                  onClick={() => onNavigate?.('sessions')}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  Sessions
-                </button>
-                <button 
                   onClick={() => onNavigate?.('knowledge-graph')}
                   className="text-gray-400 hover:text-white transition-colors"
                 >
@@ -242,11 +292,13 @@ const MainDashboard = ({ onNavigate, onShowAuth }) => {
                 </button>
               </nav>
               
-              {user && currentUserSession ? (
+              {user ? (
                 <div className="flex items-center space-x-2">
-                  <select className="bg-gray-800/50 border border-gray-600 rounded-lg px-3 py-1 text-sm text-white">
-                    <option>{currentUserSession.session_name || 'Session 1'}</option>
-                  </select>
+                  {currentUserSession && (
+                    <select className="bg-gray-800/50 border border-gray-600 rounded-lg px-3 py-1 text-sm text-white">
+                      <option>{currentUserSession.session_name || 'Session 1'}</option>
+                    </select>
+                  )}
                   <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
                     <span className="text-white text-sm font-semibold">
                       {user.user_metadata?.name?.charAt(0) || user.email?.charAt(0) || 'U'}

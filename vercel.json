@@ -11,8 +11,8 @@
     }
   ],
   "env": {
-    "VITE_SUPABASE_URL": "Enter your Supabase URL here",
-    "VITE_SUPABASE_ANON_KEY": "Enter your Supabase Anon Key here",
-    "VITE_OPENAI_API_KEY": "Enter your OpenAI API Key here"
+    "VITE_SUPABASE_URL": "https://ddwyhxmhqibspcielxhc.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkd3loeG1ocWlic3BjaWVseGhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc1Nzc0NDksImV4cCI6MjA2MzE1MzQ0OX0.Mf7UONLZdJVQi_mFcDOo0vJdz_IOCN5QrEQFAqKOI4Y",
+    "VITE_USE_FALLBACK_AUTH": "false"
   }
 } 

@@ -89,7 +89,12 @@ const optionalAuth = async (req, res, next) => {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       
-      if (supabase) {
+      // Check if this is a fallback/demo token
+      if (token.startsWith('demo-token') || token.startsWith('mock-session-')) {
+        // Treat fallback tokens as anonymous users (no req.user set)
+        console.log('Fallback/demo token detected, treating as anonymous user');
+      } else if (supabase) {
+        // Try to validate with Supabase for real tokens
         const { data: { user }, error } = await supabase.auth.getUser(token);
         if (!error && user) {
           req.user = user;
@@ -438,6 +443,16 @@ app.post('/api/history', optionalAuth, async (req, res) => {
 
     if (countError) {
       console.error('Error counting history items:', countError);
+      
+      // Check for specific column errors that indicate missing schema
+      if (countError.message && countError.message.includes('column "session_id" of relation "topics" does not exist')) {
+        console.error('Database schema issue: session_id column missing from topics table');
+        return res.status(500).json({ 
+          error: 'Database schema issue detected', 
+          details: 'The session_id column is missing from the topics table. Please run the database-schema-fix.sql script to fix this issue.',
+          schemaError: true 
+        });
+      }
     }
 
     if (count !== null && count >= 50) {
@@ -471,6 +486,17 @@ app.post('/api/history', optionalAuth, async (req, res) => {
 
     if (error) {
       console.error('Error saving topic to Supabase:', error);
+      
+      // Check for specific column errors that indicate missing schema
+      if (error.message && error.message.includes('column "session_id" of relation "topics" does not exist')) {
+        console.error('Database schema issue: session_id column missing from topics table');
+        return res.status(500).json({ 
+          error: 'Database schema issue detected', 
+          details: 'The session_id column is missing from the topics table. Please run the database-schema-fix.sql script to fix this issue.',
+          schemaError: true 
+        });
+      }
+      
       return res.status(500).json({ error: 'Failed to save topic to history', details: error.message });
     }
 
@@ -537,6 +563,17 @@ app.get('/api/history', optionalAuth, async (req, res) => {
 
       if (error) {
         console.error('Error fetching history from Supabase:', error);
+        
+        // Check for specific column errors that indicate missing schema
+        if (error.message && error.message.includes('column "session_id" of relation "topics" does not exist')) {
+          console.error('Database schema issue: session_id column missing from topics table');
+          return res.status(500).json({ 
+            error: 'Database schema issue detected', 
+            details: 'The session_id column is missing from the topics table. Please run the database-schema-fix.sql script to fix this issue.',
+            schemaError: true 
+          });
+        }
+        
         return res.status(500).json({ error: 'Failed to fetch history', details: error.message });
       }
 
@@ -588,6 +625,17 @@ app.delete('/api/history', optionalAuth, async (req, res) => {
 
       if (error) {
         console.error('Error deleting history from Supabase:', error);
+        
+        // Check for specific column errors that indicate missing schema
+        if (error.message && error.message.includes('column "session_id" of relation "topics" does not exist')) {
+          console.error('Database schema issue: session_id column missing from topics table');
+          return res.status(500).json({ 
+            error: 'Database schema issue detected', 
+            details: 'The session_id column is missing from the topics table. Please run the database-schema-fix.sql script to fix this issue.',
+            schemaError: true 
+          });
+        }
+        
         return res.status(500).json({ error: 'Failed to delete history', details: error.message });
       }
 

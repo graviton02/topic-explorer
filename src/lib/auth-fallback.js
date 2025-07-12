@@ -52,6 +52,11 @@ export const authFallback = {
     // Store session in localStorage for persistence
     localStorage.setItem('mock-session', JSON.stringify(session));
     
+    // Trigger auth state change if callback is available
+    if (authFallback._authCallback) {
+      authFallback._authCallback('SIGNED_UP', session);
+    }
+    
     return { user, session, error: null };
   },
 
@@ -77,6 +82,11 @@ export const authFallback = {
     };
     
     localStorage.setItem('mock-session', JSON.stringify(session));
+    
+    // Trigger auth state change if callback is available
+    if (authFallback._authCallback) {
+      authFallback._authCallback('SIGNED_IN', session);
+    }
     
     return { user: storedUser.user, session, error: null };
   },
@@ -110,12 +120,23 @@ export const authFallback = {
     
     localStorage.setItem('mock-session', JSON.stringify(session));
     
+    // Trigger auth state change if callback is available
+    if (authFallback._authCallback) {
+      authFallback._authCallback('SIGNED_IN', session);
+    }
+    
     return { data: { session }, error: null };
   },
 
   // Sign out
   signOut: async () => {
     localStorage.removeItem('mock-session');
+    
+    // Trigger auth state change if callback is available
+    if (authFallback._authCallback) {
+      authFallback._authCallback('SIGNED_OUT', null);
+    }
+    
     return { error: null };
   },
 
@@ -161,17 +182,21 @@ export const authFallback = {
 
   // Listen to auth changes (mock)
   onAuthStateChange: (callback) => {
-    // In a real implementation, this would set up listeners
-    // For now, we'll check for changes periodically
-    const interval = setInterval(async () => {
+    // Store the callback for manual triggering when auth state actually changes
+    authFallback._authCallback = callback;
+    
+    // Only trigger initial state check
+    setTimeout(async () => {
       const { session } = await authFallback.getCurrentSession();
-      callback('SESSION_UPDATED', session);
-    }, 1000);
+      callback('SIGNED_IN', session);
+    }, 100);
     
     return {
       data: {
         subscription: {
-          unsubscribe: () => clearInterval(interval)
+          unsubscribe: () => {
+            authFallback._authCallback = null;
+          }
         }
       }
     };

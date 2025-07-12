@@ -65,6 +65,12 @@ export const saveTopicToHistory = async (historyItem, authHeaders = {}) => {
 
     if (!response.ok) {
       const errorData = await response.json();
+      
+      // Handle schema-specific errors with helpful messages
+      if (errorData.schemaError) {
+        throw new Error('Database setup incomplete. Please run the database setup script (database-schema-fix.sql) to fix missing columns.');
+      }
+      
       throw new Error(errorData.error || 'Failed to save history');
     }
 

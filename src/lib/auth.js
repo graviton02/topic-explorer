@@ -293,6 +293,20 @@ export const sessionManager = {
 export const userProfile = {
   // Get user profile
   getProfile: async (userId) => {
+    if (useFallback || !supabase) {
+      // Return fallback profile for demo users
+      return {
+        profile: {
+          id: userId,
+          email: 'demo@example.com',
+          name: 'Demo User',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        error: null
+      }
+    }
+
     const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
@@ -304,6 +318,21 @@ export const userProfile = {
 
   // Update user profile
   updateProfile: async (userId, updates) => {
+    if (useFallback || !supabase) {
+      // Return updated fallback profile
+      return {
+        profile: {
+          id: userId,
+          email: 'demo@example.com',
+          name: updates.name || 'Demo User',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          ...updates
+        },
+        error: null
+      }
+    }
+
     const { data, error } = await supabase
       .from('user_profiles')
       .update({ ...updates, updated_at: new Date().toISOString() })
@@ -316,6 +345,24 @@ export const userProfile = {
 
   // Get user statistics
   getUserStats: async (userId) => {
+    if (useFallback || !supabase) {
+      // Return fallback stats
+      return {
+        stats: {
+          user_id: userId,
+          email: 'demo@example.com',
+          name: 'Demo User',
+          total_topics: 0,
+          total_sessions: 1,
+          days_active: 1,
+          first_exploration: new Date().toISOString(),
+          last_exploration: new Date().toISOString(),
+          total_connections: 0
+        },
+        error: null
+      }
+    }
+
     const { data, error } = await supabase
       .from('user_statistics')
       .select('*')
